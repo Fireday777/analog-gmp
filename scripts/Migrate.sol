@@ -41,7 +41,7 @@ contract MigrateGateway is Script {
      */
     mapping(uint16 => State) public states;
 
-    // Computes the EIP-712 domain separador
+    // Computes the EIP-712 domain separator
     function _computeDomainSeparator(uint256 networkId, address addr) private pure returns (bytes32) {
         return keccak256(
             abi.encode(
@@ -49,7 +49,7 @@ contract MigrateGateway is Script {
                 keccak256("Analog Gateway Contract"),
                 keccak256("0.1.0"),
                 uint256(networkId),
-                address(addr)
+                addr
             )
         );
     }
@@ -73,7 +73,7 @@ contract MigrateGateway is Script {
 
         // Verify if the provided proxy address is valid
         {
-            require(proxyAddress.code.length > 0, "UpgradeGateway: proxy doesn't exists");
+            require(proxyAddress.code.length > 0, "UpgradeGateway: proxy doesn't exist");
             bytes32 codehash;
             assembly {
                 codehash := extcodehash(proxyAddress)
@@ -101,21 +101,20 @@ contract MigrateGateway is Script {
 
         // Retrieve the current implementation
         address implementation = address(uint160(uint256(vm.load(proxyAddress, ERC1967.IMPLEMENTATION_SLOT))));
-        console.log("    IMPLEMENATTION", implementation);
+        console.log("    IMPLEMENTATION", implementation);
 
         // Print information about the current network
         console.log("   GATEWAY BALANCE", proxyAddress.balance);
-        console.log("  DEPLOYER BALANCE", deployer.balance);
-        console.log("      LATEST BLOCK", block.number);
+        console.log("  DEPLOYER BALANCE", deployer.balance);console.log("      LATEST BLOCK", block.number);
         console.log("   BLOCK GAS LIMIT", block.gaslimit);
         console.log("          CHAIN ID", block.chainid);
         console.log("         GAS PRICE", tx.gasprice);
         console.log("          BASE FEE", block.basefee, "\n");
 
-        require(admin == deployer, "deployer is not the admin if this contract");
-        require(block.gaslimit < uint64(type(int64).max), "block gas limit exceeds the limit of int64");
+        require(admin == deployer, "deployer is not the admin of this contract");
+        require(block.gaslimit < type(uint64).max, "block gas limit exceeds the limit of uint64");
         require(block.gaslimit > 1_000_000, "block gas limit is too low");
-        require(block.number < uint64(type(int64).max), "block number limit exceeds the limit of int64");
+        require(block.number < type(uint64).max, "block number exceeds the limit of uint64");
         require(block.number > 1_000_000, "block number is low, is this a local testnet?");
 
         // Update network information
@@ -136,7 +135,7 @@ contract MigrateGateway is Script {
         private
         returns (UpdateNetworkInfo[] memory networks)
     {
-        networks = new UpdateNetworkInfo[](3);
+        networks = new UpdateNetworkInfo ;
         networks[0] = _setupNetwork("SEPOLIA_RPC_URL", proxyAddress, deployer);
 
         networks[1] = _setupNetwork("SHIBUYA_RPC_URL", proxyAddress, deployer);
@@ -144,7 +143,7 @@ contract MigrateGateway is Script {
 
         networks[2] = _setupNetwork("POLYGON_AMOY_RPC_URL", proxyAddress, deployer);
         require(networks[2].networkId != networks[0].networkId, "AMOY and SEPOLIA have the same network id");
-        require(networks[2].networkId != networks[0].networkId, "AMOY and SHIBUYA have the same network id");
+        require(networks[2].networkId != networks[1].networkId, "AMOY and SHIBUYA have the same network id");
     }
 
     /**
@@ -164,7 +163,7 @@ contract MigrateGateway is Script {
             address deployer = vm.addr(deployerPrivateKey);
             uint256 nonce = vm.getNonce(deployer);
             address implementation = vm.computeCreateAddress(deployer, nonce);
-            console.log(" NEW IMPLEMENATTION", implementation);
+            console.log(" NEW IMPLEMENTATION", implementation);
         }
 
         // Update message mortality
@@ -191,9 +190,7 @@ contract MigrateGateway is Script {
     function run() external {
         // Retrieve the gateway proxy address
         address proxyAddress = vm.envAddress("PROXY_ADDRESS");
-        console.log("     PROXY_ADDRESS", proxyAddress);
-
-        // Retrieve deployer private key
+        console.log("     PROXY_ADDRESS", proxyAddress);// Retrieve deployer private key
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
         console.log("          DEPLOYER", deployer, "\n");
